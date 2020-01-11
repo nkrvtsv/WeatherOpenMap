@@ -28,7 +28,7 @@ import java.util.Date;
 import java.util.Locale;
 
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements Observer {
 
     TextView addressTxt, updated_atTxt, statusTxt, tempTxt, temp_minTxt, temp_maxTxt, sunriseTxt,
             sunsetTxt, windTxt, pressureTxt, humidityTxt;
@@ -36,6 +36,8 @@ public class MainActivity extends AppCompatActivity {
     ArrayAdapter<String> arrayAdapter;
     Context context;
     ListView listView;
+    private WeatherTask weatherTask;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,11 +59,31 @@ public class MainActivity extends AppCompatActivity {
         listView = findViewById(R.id.listView);
         context = this;
 
-        new WeatherTask().execute();
+        GeoWorker.getInstance().locatePos(context);
+        ResponseListener.getInstance().subscribeOnPreResponse(this);
+        ResponseListener.getInstance().subscibeOnPostExecute(this);
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                GeoWorker.getInstance().setCityName(query);
+                GeoWorker.getInstance().locatePos(context);
+                weatherTask = new WeatherTask();
+                weatherTask.execute();
+                return false;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                return false;
+            }
+        });
+
+        weatherTask = new WeatherTask();
+        weatherTask.execute();
     }
 
-    void cityGotCallback() {
-        arrayAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, new WeatherTask().getCities());
+/*    void cityGotCallback() {
+        //arrayAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, new GeoWorker);
         listView.setAdapter(arrayAdapter);
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
@@ -79,132 +101,36 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
+*/
 
+    @Override
+    public void onPreResponse() {
 
-    class WeatherTask extends AsyncTask<String, Void, String> {
+        /* Showing the ProgressBar, Making the main design GONE */
+        findViewById(R.id.loader).setVisibility(View.VISIBLE);
+        findViewById(R.id.mainContainer).setVisibility(View.GONE);
+        findViewById(R.id.errorText).setVisibility(View.GONE);
 
-        private String mCity = "KHARKIV, UA";
-        private ArrayList<String> mCities = new ArrayList();
-        private String API = "8118ed6ee68db2debfaaa5a44c832918";
+    }
 
-        public ArrayList<String> getCities() {
-            return mCities;
-        }
+    @Override
+    public void onPostExecute() {
+        addressTxt.setText(weatherTask.getAddress());
+        updated_atTxt.setText(weatherTask.getUpdatedAtText());
+        statusTxt.setText(weatherTask.getWeatherDescription().toUpperCase());
+        tempTxt.setText(weatherTask.getTemp());
+        temp_minTxt.setText(weatherTask.getTempMin());
+        temp_maxTxt.setText(weatherTask.getTempMax());
+        sunriseTxt.setText(new SimpleDateFormat("hh:mm a", Locale.ENGLISH)
+                .format(new Date(weatherTask.getSunrise() * 1000)));
+        sunsetTxt.setText(new SimpleDateFormat("hh:mm a", Locale.ENGLISH)
+                .format(new Date(weatherTask.getSunset() * 1000)));
+        windTxt.setText(weatherTask.getWindSpeed());
+        pressureTxt.setText(weatherTask.getPressure());
+        humidityTxt.setText(weatherTask.getHumidity());
 
-        public String getCity() {
-            return mCity;
-        }
-
-        public void setmity(String mCity) {
-            this.mCity = mCity;
-        }
-
-        public ArrayList<String> getCityList() {
-            try {
-                JSONArray jsonarray = new JSONArray(loadJSONFromAsset(context));
-                for (int i = 0; i < jsonarray.length(); i++) {
-                    JSONObject jsonobject = jsonarray.getJSONObject(i);
-                    String name = jsonobject.getString("name");
-                    String country = jsonobject.getString("country");
-                    mCities.add(name + ", " + country);
-                }
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-            return mCities;
-        }
-
-        public String loadJSONFromAsset(Context context) {
-            String json = null;
-            try {
-                InputStream is = context.getAssets().open("city.list.min.json");
-
-                int size = is.available();
-
-                byte[] buffer = new byte[size];
-
-                is.read(buffer);
-
-                is.close();
-
-                json = new String(buffer, "UTF-8");
-
-
-            } catch (IOException ex) {
-                ex.printStackTrace();
-                return null;
-            }
-            return json;
-        }
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-
-            /* Showing the ProgressBar, Making the main design GONE */
-            findViewById(R.id.loader).setVisibility(View.VISIBLE);
-            findViewById(R.id.mainContainer).setVisibility(View.GONE);
-            findViewById(R.id.errorText).setVisibility(View.GONE);
-        }
-
-        protected String doInBackground(String... args) {
-            String response = HttpRequest.excuteGet("https://api.openweathermap.org/data/2.5/weather?q=" + mCity + "&units=metric&appid=" + API);
-            return response;
-        }
-
-        @Override
-        protected void onPostExecute(String result) {
-            try {
-                JSONObject jsonObj = new JSONObject(result);
-                JSONObject main = jsonObj.getJSONObject("main");
-                JSONObject sys = jsonObj.getJSONObject("sys");
-                JSONObject wind = jsonObj.getJSONObject("wind");
-                JSONObject weather = jsonObj.getJSONArray("weather").getJSONObject(0);
-
-                Long updatedAt = jsonObj.getLong("dt");
-                String updatedAtText = "Updated at: " + new SimpleDateFormat("dd/MM/yyyy hh:mm a", Locale.ENGLISH).format(new Date(updatedAt * 1000));
-                String temp = main.getString("temp") + "°C";
-                String tempMin = "Min Temp: " + main.getString("temp_min") + "°C";
-                String tempMax = "Max Temp: " + main.getString("temp_max") + "°C";
-                String pressure = main.getString("pressure");
-                String humidity = main.getString("humidity");
-
-                Long sunrise = sys.getLong("sunrise");
-                Long sunset = sys.getLong("sunset");
-                String windSpeed = wind.getString("speed");
-                String weatherDescription = weather.getString("description");
-
-                String address = jsonObj.getString("name") + ", " + sys.getString("country");
-
-                /* Populating extracted data into our views */
-                addressTxt.setText(address);
-                updated_atTxt.setText(updatedAtText);
-                statusTxt.setText(weatherDescription.toUpperCase());
-                tempTxt.setText(temp);
-                temp_minTxt.setText(tempMin);
-                temp_maxTxt.setText(tempMax);
-                sunriseTxt.setText(new SimpleDateFormat("hh:mm a", Locale.ENGLISH).format(new Date(sunrise * 1000)));
-                sunsetTxt.setText(new SimpleDateFormat("hh:mm a", Locale.ENGLISH).format(new Date(sunset * 1000)));
-                windTxt.setText(windSpeed);
-                pressureTxt.setText(pressure);
-                humidityTxt.setText(humidity);
-
-                /* Views populated, Hiding the loader, Showing the main design */
-                findViewById(R.id.loader).setVisibility(View.GONE);
-                findViewById(R.id.mainContainer).setVisibility(View.VISIBLE);
-
-
-            } catch (JSONException e) {
-                findViewById(R.id.loader).setVisibility(View.GONE);
-                findViewById(R.id.errorText).setVisibility(View.VISIBLE);
-            }
-
-            AsyncTask.execute(new Runnable() {
-                @Override
-                public void run() {
-                    getCityList();
-                }
-            });
-        }
+        /* Views populated, Hiding the loader, Showing the main design */
+        findViewById(R.id.loader).setVisibility(View.GONE);
+        findViewById(R.id.mainContainer).setVisibility(View.VISIBLE);
     }
 }
