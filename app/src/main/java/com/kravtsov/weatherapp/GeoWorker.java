@@ -26,10 +26,6 @@ public class GeoWorker {
     private String mCityName = null;
     private double mLat, mLong;
 
-    public String getmCityName() {
-        return mCityName;
-    }
-
     public double getLong() {
         return mLong;
     }
@@ -48,7 +44,7 @@ public class GeoWorker {
                 List<Address> addresses;
                 addresses = gc.getFromLocationName(mCityName, 1); // get the found Address Objects
 
-                List<LatLng> ll = new ArrayList<LatLng>(addresses.size()); // A list to save the coordinates if they are available
+                List<LatLng> ll = new ArrayList<>(addresses.size()); // A list to save the coordinates if they are available
                 for (Address a : addresses) {
                         if (a.hasLatitude() && a.hasLongitude()) {
                             ll.add(new LatLng(a.getLatitude(), a.getLongitude()));

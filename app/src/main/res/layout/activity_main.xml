@@ -9,14 +9,21 @@
 
     <RelativeLayout android:id="@+id/mainContainer" android:layout_width="match_parent"
         android:layout_height="match_parent" android:visibility="visible">
-        <LinearLayout android:id="@+id/addressContainer" android:layout_width="match_parent"
-            android:layout_height="wrap_content" android:orientation="vertical"
-            android:gravity="center">
+
+
+        <LinearLayout
+            android:id="@+id/addressContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical">
 
             <SearchView
                 android:id="@+id/searchView"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent" />
+                android:layout_height="match_parent"
+                android:background="#7FFFEFF1"
+                android:tint="#FFFFFF" />
 
 
             <ListView
@@ -32,12 +39,14 @@
                 android:text="KHARKIV, UA"
                 android:textSize="24dp" />
 
-            <TextView android:id="@+id/updated_at" android:layout_width="wrap_content"
-                android:layout_height="wrap_content" android:textSize="14dp"
-                android:text="20 April 2012, 20:08 PM"/>
+            <TextView
+                android:id="@+id/updated_at"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="20 April 2012, 20:08 PM"
+                android:textSize="14dp" />
 
         </LinearLayout>
-
 
         <LinearLayout android:id="@+id/overviewContainer" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:orientation="vertical"
